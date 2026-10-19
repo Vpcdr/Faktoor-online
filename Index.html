@@ -1,0 +1,443 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>مولتی تعمیرات - سیستم فاکتور آنلاین</title>
+    
+    <!-- تنظیمات آیکون برنامه و قابلیت نصب روی گوشی (PWA) -->
+    <link rel="icon" type="image/jpeg" href="icon.jpg">
+    <link rel="apple-touch-icon" href="icon.jpg">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="theme-color" content="#4f46e5">
+
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <!-- کتابخانه تبدیل مستقیم به PDF -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    <style>
+        body { font-family: 'Vazirmatn', sans-serif; }
+        input[type="number"]::-webkit-inner-spin-button,
+        input[type="number"]::-webkit-outer-spin-button {
+            -webkit-appearance: none;
+            margin: 0;
+        }
+        @media print {
+            .no-print { display: none !important; }
+            body { background: white !important; padding: 0 !important; }
+            .shadow-xl { box-shadow: none !important; border: none !important; }
+            input { border: none !important; background: transparent !important; padding: 2px !important; }
+        }
+    </style>
+</head>
+<body class="bg-slate-100 text-slate-800 min-h-screen p-2 md:p-6">
+
+    <div id="invoice-container" class="max-w-5xl mx-auto bg-white rounded-2xl shadow-xl border border-slate-200 p-4 md:p-8">
+        
+        <!-- سربرگ فاکتور همراه با آیکون اختصاصی مولتی تعمیرات -->
+        <div class="flex flex-col md:flex-row justify-between items-start md:items-center border-b border-slate-200 pb-6 mb-6 gap-4">
+            <div class="flex items-center gap-3">
+                <img src="icon.jpg" alt="مولتی تعمیرات" class="w-14 h-14 rounded-2xl object-cover border-2 border-indigo-500 shadow-md">
+                <div>
+                    <h1 class="text-2xl md:text-3xl font-bold text-indigo-700">مولتی تعمیرات</h1>
+                    <p class="text-xs md:text-sm text-slate-500 mt-1">سامانه آنلاین صدور فاکتور خدمات و قطعات</p>
+                </div>
+            </div>
+            <div class="bg-indigo-50/70 p-3 md:p-4 rounded-xl border border-indigo-100 w-full md:w-auto text-xs md:text-sm space-y-1">
+                <div class="flex justify-between md:justify-start gap-4"><span class="text-slate-600 font-semibold">شماره فاکتور:</span> <span id="invoice-number" class="font-bold text-indigo-600 font-mono">1001</span></div>
+                <div class="flex justify-between md:justify-start gap-4"><span class="text-slate-600 font-semibold">تاریخ شمسی:</span> <span id="jalali-date" class="font-medium"></span></div>
+                <div class="flex justify-between md:justify-start gap-4"><span class="text-slate-600 font-semibold">تاریخ میلادی:</span> <span id="gregorian-date" class="font-medium font-mono"></span></div>
+            </div>
+        </div>
+
+        <!-- مشخصات فروشنده (ثابت) و خریدار -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+            <!-- مشخصات فروشنده -->
+            <div class="p-4 bg-slate-50 rounded-xl border border-slate-200">
+                <h3 class="font-bold text-slate-700 mb-3 text-sm flex items-center gap-1.5">
+                    <span>🏢</span> مشخصات فروشنده (ثابت)
+                </h3>
+                <div class="space-y-1.5 text-xs md:text-sm">
+                    <div><span class="text-slate-500">فروشگاه:</span> <strong class="text-slate-800">مولتی تعمیرات</strong></div>
+                    <div><span class="text-slate-500">مدیریت:</span> <strong class="text-slate-800">اسلام محدث</strong></div>
+                    <div><span class="text-slate-500">شماره تماس:</span> <strong class="text-indigo-700 font-mono" dir="ltr">09158062916</strong></div>
+                </div>
+            </div>
+
+            <!-- مشخصات خریدار -->
+            <div class="p-4 bg-slate-50 rounded-xl border border-slate-200">
+                <h3 class="font-bold text-slate-700 mb-3 text-sm flex items-center gap-1.5">
+                    <span>👤</span> مشخصات خریدار / مشتری
+                </h3>
+                <div class="space-y-2">
+                    <input type="text" id="customer-name" placeholder="نام و نام خانوادگی مشتری..." class="w-full p-2 text-xs md:text-sm bg-white border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+                    <input type="text" id="customer-phone" placeholder="شماره همراه مشتری..." class="w-full p-2 text-xs md:text-sm bg-white border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+                </div>
+            </div>
+        </div>
+
+        <!-- جدول ۱۵ سطر خدمات و قطعات -->
+        <div class="mb-6 overflow-x-auto">
+            <table class="w-full text-right border-collapse min-w-[650px]">
+                <thead>
+                    <tr class="bg-indigo-600 text-white text-xs md:text-sm">
+                        <th class="p-2.5 rounded-r-lg w-12 text-center">ردیف</th>
+                        <th class="p-2.5">شرح خدمات / کالا</th>
+                        <th class="p-2.5 w-24 text-center">تعداد / مقدار</th>
+                        <th class="p-2.5 w-36 text-center">قیمت واحد (تومان)</th>
+                        <th class="p-2.5 w-40 text-left rounded-l-lg">جمع کل (تومان)</th>
+                    </tr>
+                </thead>
+                <tbody id="invoice-items" class="text-xs md:text-sm divide-y divide-slate-200">
+                    <!-- سطرها توسط جاوااسکریپت تولید می‌شوند -->
+                </tbody>
+            </table>
+        </div>
+
+        <!-- محاسبات مالی -->
+        <div class="flex flex-col md:flex-row justify-between items-end border-t border-slate-200 pt-6 mb-8 gap-4">
+            <div class="text-xs text-slate-500 space-y-1">
+                <p>• کلیه مبالغ به تومان محاسبه شده‌اند.</p>
+                <p>• خدمات و قطعات «مولتی تعمیرات» شامل ضمانت طبق فاکتور می‌باشد.</p>
+            </div>
+            <div class="w-full md:w-80 bg-slate-50 p-4 rounded-xl border border-slate-200 space-y-2 text-xs md:text-sm">
+                <div class="flex justify-between">
+                    <span class="text-slate-600">جمع خدمات/اقلام:</span>
+                    <span id="subtotal" class="font-bold text-slate-800">۰</span>
+                </div>
+                <div class="flex justify-between">
+                    <span class="text-slate-600">مالیات / خدمات (۱۰٪):</span>
+                    <span id="tax" class="font-bold text-slate-800">۰</span>
+                </div>
+                <div class="flex justify-between text-sm md:text-base font-bold text-indigo-700 border-t border-slate-200 pt-2">
+                    <span>مبلغ قابل پرداخت:</span>
+                    <span id="grand-total">۰</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- دکمه‌های عملیاتی اصلی -->
+        <div class="flex flex-wrap gap-2 md:gap-3 justify-end no-print border-t border-slate-200 pt-6">
+            <button onclick="newInvoice()" class="px-4 py-2.5 bg-slate-200 hover:bg-slate-300 text-slate-800 font-medium rounded-xl text-xs md:text-sm transition flex items-center gap-1.5">
+                ➕ فاکتور جدید
+            </button>
+            <button id="print-btn" onclick="generatePDF()" class="px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-xl text-xs md:text-sm transition flex items-center gap-1.5">
+                🖨️ دانلود فایل PDF / چاپ
+            </button>
+            <button onclick="saveInvoiceLocally()" class="px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-medium rounded-xl text-xs md:text-sm transition flex items-center gap-1.5">
+                💾 ذخیره در گوشی
+            </button>
+            <button onclick="openCloudModal()" class="px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-medium rounded-xl text-xs md:text-sm transition flex items-center gap-1.5">
+                ☁️ ذخیره ابری / پشتیبان
+            </button>
+        </div>
+
+        <!-- بخش مدیریت و فراخوانی فاکتورها -->
+        <div class="mt-10 no-print border-t border-slate-200 pt-8">
+            <h2 class="text-base md:text-lg font-bold text-slate-800 mb-4 flex items-center gap-2">
+                <span>📋</span> لیست فاکتورهای ذخیره‌شده (مولتی تعمیرات)
+            </h2>
+            <div class="overflow-x-auto bg-slate-50 rounded-xl border border-slate-200 p-2">
+                <table class="w-full text-right text-xs md:text-sm">
+                    <thead>
+                        <tr class="border-b border-slate-200 text-slate-500">
+                            <th class="p-2">شماره</th>
+                            <th class="p-2">مشتری</th>
+                            <th class="p-2">تاریخ</th>
+                            <th class="p-2">مبلغ کل (تومان)</th>
+                            <th class="p-2 text-center">عملیات</th>
+                        </tr>
+                    </thead>
+                    <tbody id="saved-invoices-list" class="divide-y divide-slate-200">
+                        <!-- لیست فاکتورهای ذخیره‌شده -->
+                    </tbody>
+                </table>
+                <div id="no-invoices-msg" class="text-center py-6 text-slate-400 text-xs md:text-sm">
+                    هیچ فاکتوری ذخیره نشده است.
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- مدال ذخیره ابری -->
+    <div id="cloud-modal" class="fixed inset-0 bg-black/50 backdrop-blur-sm hidden items-center justify-center p-4 z-50 no-print">
+        <div class="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl">
+            <h3 class="text-base md:text-lg font-bold text-slate-800 mb-2 flex items-center gap-2">
+                <span>☁️</span> ذخیره‌سازی ابری و پشتیبان
+            </h3>
+            <p class="text-xs text-slate-500 mb-6">گزینه مورد نظر جهت ذخیره یا ارسال فاکتور را انتخاب کنید:</p>
+            
+            <div class="space-y-3">
+                <button onclick="exportJSON()" class="w-full p-3 text-right border border-slate-200 rounded-xl hover:bg-indigo-50 transition flex items-center justify-between">
+                    <div>
+                        <div class="font-bold text-slate-800 text-xs md:text-sm">دانلود فایل پشتیبان (JSON)</div>
+                        <div class="text-xs text-slate-500">ذخیره فایل کامل دیتابیس برای آپلود در گوگل درایو</div>
+                    </div>
+                    <span class="text-lg">📥</span>
+                </button>
+                <button onclick="copyShareText()" class="w-full p-3 text-right border border-slate-200 rounded-xl hover:bg-indigo-50 transition flex items-center justify-between">
+                    <div>
+                        <div class="font-bold text-slate-800 text-xs md:text-sm">کپی متن فاکتور (ارسال پیامکی/پیام‌رسان)</div>
+                        <div class="text-xs text-slate-500">ارسال سریع جزئیات فاکتور برای مشتری</div>
+                    </div>
+                    <span class="text-lg">📲</span>
+                </button>
+            </div>
+
+            <div class="mt-6 flex justify-end">
+                <button onclick="closeCloudModal()" class="px-4 py-2 bg-slate-200 hover:bg-slate-300 text-slate-700 text-xs md:text-sm font-medium rounded-xl">
+                    بستن
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- اسکریپت اصلی -->
+    <script>
+        // ۱. ساخت دقیق ۱۵ سطر جدول
+        const tbody = document.getElementById('invoice-items');
+        for (let i = 1; i <= 15; i++) {
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+                <td class="p-2 text-center text-slate-400 font-mono">${i}</td>
+                <td class="p-1"><input type="text" placeholder="شرح خدمت یا قطعه ${i}" class="item-desc w-full p-2 bg-slate-50 border border-slate-200 rounded-lg focus:bg-white focus:ring-2 focus:ring-indigo-500 focus:outline-none"></td>
+                <td class="p-1"><input type="number" min="0" value="0" oninput="calculateTotal()" class="item-qty w-full p-2 text-center bg-slate-50 border border-slate-200 rounded-lg font-mono focus:bg-white focus:ring-2 focus:ring-indigo-500 focus:outline-none"></td>
+                <td class="p-1"><input type="number" min="0" value="0" oninput="calculateTotal()" class="item-price w-full p-2 text-center bg-slate-50 border border-slate-200 rounded-lg font-mono focus:bg-white focus:ring-2 focus:ring-indigo-500 focus:outline-none"></td>
+                <td class="row-total p-2 text-left font-mono font-bold text-slate-700">۰</td>
+            `;
+            tbody.appendChild(tr);
+        }
+
+        // ۲. تنظیم تاریخ میلادی و شمسی
+        const now = new Date();
+        document.getElementById('gregorian-date').innerText = now.toLocaleDateString('en-US');
+        document.getElementById('jalali-date').innerText = new Intl.DateTimeFormat('fa-IR', { dateStyle: 'full' }).format(now);
+
+        // ۳. محاسبات قیمت
+        function calculateTotal() {
+            const rows = document.querySelectorAll('#invoice-items tr');
+            let subtotal = 0;
+
+            rows.forEach(row => {
+                const qty = parseFloat(row.querySelector('.item-qty').value) || 0;
+                const price = parseFloat(row.querySelector('.item-price').value) || 0;
+                const rowTotal = qty * price;
+                
+                row.querySelector('.row-total').innerText = rowTotal.toLocaleString('fa-IR');
+                subtotal += rowTotal;
+            });
+
+            const tax = subtotal * 0.10;
+            const grandTotal = subtotal + tax;
+
+            document.getElementById('subtotal').innerText = subtotal.toLocaleString('fa-IR');
+            document.getElementById('tax').innerText = tax.toLocaleString('fa-IR');
+            document.getElementById('grand-total').innerText = grandTotal.toLocaleString('fa-IR');
+
+            return { subtotal, tax, grandTotal };
+        }
+
+        // ۴. دانلود PDF قطعی و سازگار با گوشی‌های موبایل
+        function generatePDF() {
+            const btn = document.getElementById('print-btn');
+            btn.innerText = 'در حال ساخت فایل PDF... ⏳';
+
+            const element = document.getElementById('invoice-container');
+            const invNum = document.getElementById('invoice-number').innerText;
+            const customerName = document.getElementById('customer-name').value || 'Customer';
+
+            const opt = {
+                margin:       [10, 10, 10, 10],
+                filename:     `Invoice_${invNum}_${customerName}.pdf`,
+                image:        { type: 'jpeg', quality: 0.98 },
+                html2canvas:  { scale: 2, useCORS: true },
+                jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
+            };
+
+            const noPrintElements = document.querySelectorAll('.no-print');
+            noPrintElements.forEach(el => el.style.display = 'none');
+
+            html2pdf().set(opt).from(element).save().then(() => {
+                noPrintElements.forEach(el => el.style.display = '');
+                btn.innerText = '🖨️ دانلود فایل PDF / چاپ';
+            }).catch(err => {
+                window.print();
+                noPrintElements.forEach(el => el.style.display = '');
+                btn.innerText = '🖨️ دانلود فایل PDF / چاپ';
+            });
+        }
+
+        // ۵. مدیریت ذخیره‌سازی محلی
+        function getSavedInvoices() {
+            return JSON.parse(localStorage.getItem('multi_repair_invoices') || '[]');
+        }
+
+        function saveInvoiceLocally() {
+            const customerName = document.getElementById('customer-name').value.trim();
+            if (!customerName) {
+                alert('لطفاً نام مشتری را وارد کنید.');
+                return;
+            }
+
+            const invNum = document.getElementById('invoice-number').innerText;
+            const customerPhone = document.getElementById('customer-phone').value;
+            const totals = calculateTotal();
+
+            const items = [];
+            document.querySelectorAll('#invoice-items tr').forEach(row => {
+                const desc = row.querySelector('.item-desc').value.trim();
+                const qty = parseFloat(row.querySelector('.item-qty').value) || 0;
+                const price = parseFloat(row.querySelector('.item-price').value) || 0;
+                if (desc || qty > 0) {
+                    items.push({ desc, qty, price });
+                }
+            });
+
+            const invoiceData = {
+                id: invNum,
+                customerName,
+                customerPhone,
+                date: document.getElementById('jalali-date').innerText,
+                items,
+                subtotal: totals.subtotal,
+                tax: totals.tax,
+                grandTotal: totals.grandTotal
+            };
+
+            const saved = getSavedInvoices();
+            const existingIndex = saved.findIndex(item => item.id === invNum);
+            
+            if (existingIndex >= 0) {
+                saved[existingIndex] = invoiceData;
+            } else {
+                saved.push(invoiceData);
+            }
+
+            localStorage.setItem('multi_repair_invoices', JSON.stringify(saved));
+            alert(`فاکتور شماره ${invNum} با موفقیت در دستگاه شما ذخیره شد.`);
+            renderSavedInvoices();
+        }
+
+        // ۶. رندر لیست فاکتورها
+        function renderSavedInvoices() {
+            const list = getSavedInvoices();
+            const tbodySaved = document.getElementById('saved-invoices-list');
+            const noMsg = document.getElementById('no-invoices-msg');
+
+            tbodySaved.innerHTML = '';
+            if (list.length === 0) {
+                noMsg.style.display = 'block';
+                return;
+            }
+            noMsg.style.display = 'none';
+
+            list.forEach(inv => {
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td class="p-2 font-mono font-bold text-indigo-600">${inv.id}</td>
+                    <td class="p-2 font-medium">${inv.customerName}</td>
+                    <td class="p-2 text-slate-500">${inv.date}</td>
+                    <td class="p-2 font-mono font-bold">${inv.grandTotal.toLocaleString('fa-IR')}</td>
+                    <td class="p-2 text-center space-x-1 space-x-reverse">
+                        <button onclick="loadInvoice('${inv.id}')" class="px-2.5 py-1 bg-indigo-100 hover:bg-indigo-200 text-indigo-700 rounded-lg text-xs font-medium">فراخوانی</button>
+                        <button onclick="deleteInvoice('${inv.id}')" class="px-2.5 py-1 bg-red-100 hover:bg-red-200 text-red-600 rounded-lg text-xs font-medium">حذف</button>
+                    </td>
+                `;
+                tbodySaved.appendChild(tr);
+            });
+        }
+
+        // ۷. فراخوانی فاکتور ذخیره‌شده
+        function loadInvoice(id) {
+            const saved = getSavedInvoices();
+            const inv = saved.find(item => item.id === id);
+            if (!inv) return;
+
+            document.getElementById('invoice-number').innerText = inv.id;
+            document.getElementById('customer-name').value = inv.customerName;
+            document.getElementById('customer-phone').value = inv.customerPhone || '';
+
+            const rows = document.querySelectorAll('#invoice-items tr');
+            rows.forEach((row, index) => {
+                const item = inv.items[index];
+                if (item) {
+                    row.querySelector('.item-desc').value = item.desc;
+                    row.querySelector('.item-qty').value = item.qty;
+                    row.querySelector('.item-price').value = item.price;
+                } else {
+                    row.querySelector('.item-desc').value = '';
+                    row.querySelector('.item-qty').value = 0;
+                    row.querySelector('.item-price').value = 0;
+                }
+            });
+
+            calculateTotal();
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+        // ۸. حذف فاکتور
+        function deleteInvoice(id) {
+            if (!confirm(`آیا از حذف فاکتور شماره ${id} مطمئن هستید؟`)) return;
+            let saved = getSavedInvoices();
+            saved = saved.filter(item => item.id !== id);
+            localStorage.setItem('multi_repair_invoices', JSON.stringify(saved));
+            renderSavedInvoices();
+        }
+
+        // ۹. ایجاد فاکتور جدید
+        function newInvoice() {
+            document.getElementById('invoice-number').innerText = Math.floor(1000 + Math.random() * 9000);
+            document.getElementById('customer-name').value = '';
+            document.getElementById('customer-phone').value = '';
+            
+            document.querySelectorAll('#invoice-items tr').forEach(row => {
+                row.querySelector('.item-desc').value = '';
+                row.querySelector('.item-qty').value = 0;
+                row.querySelector('.item-price').value = 0;
+            });
+
+            calculateTotal();
+        }
+
+        // ۱۰. کنترل مدال فضای ابری
+        function openCloudModal() {
+            document.getElementById('cloud-modal').classList.remove('hidden');
+            document.getElementById('cloud-modal').classList.add('flex');
+        }
+
+        function closeCloudModal() {
+            document.getElementById('cloud-modal').classList.add('hidden');
+            document.getElementById('cloud-modal').classList.remove('flex');
+        }
+
+        function exportJSON() {
+            const data = localStorage.getItem('multi_repair_invoices') || '[]';
+            const blob = new Blob([data], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `Multi_Repair_Invoices_Backup.json`;
+            a.click();
+            closeCloudModal();
+        }
+
+        function copyShareText() {
+            const invNum = document.getElementById('invoice-number').innerText;
+            const customer = document.getElementById('customer-name').value || 'مشتری محترم';
+            const grandTotal = document.getElementById('grand-total').innerText;
+            
+            const text = `فاکتور خدمات مولتی تعمیرات\nشماره فاکتور: ${invNum}\nنام مشتری: ${customer}\nمبلغ قابل پرداخت: ${grandTotal} تومان\nمسئول: اسلام محدث (09158062916)`;
+            
+            navigator.clipboard.writeText(text).then(() => {
+                alert('متن فاکتور کپی شد! می‌توانید آن را در ایتا، تلگرام یا واتساپ ارسال کنید.');
+                closeCloudModal();
+            });
+        }
+
+        renderSavedInvoices();
+    </script>
+</body>
+</html>
